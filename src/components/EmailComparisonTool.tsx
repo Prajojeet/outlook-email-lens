@@ -109,7 +109,7 @@ const EmailComparisonTool = () => {
       <div className="fixed bottom-6 right-6 z-50">
         <Button
           onClick={() => setIsOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300"
+          className="bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           size="lg"
         >
           📧 Email Lens
@@ -121,13 +121,17 @@ const EmailComparisonTool = () => {
   return (
     <>
       {/* Main Extension Popup */}
-      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden bg-white shadow-2xl">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 relative">
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden bg-white shadow-2xl border-0 rounded-2xl">
+          <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-700 text-white p-6 relative rounded-t-2xl">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                  📧
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                  <img 
+                    src="/lovable-uploads/7a69c4fd-3d5e-45d2-b3c8-c758260eb538.png" 
+                    alt="JSW Logo" 
+                    className="w-8 h-8 object-contain"
+                  />
                 </div>
                 <div>
                   <h1 className="text-xl font-bold">Email Comparison Tool</h1>
@@ -138,14 +142,14 @@ const EmailComparisonTool = () => {
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsOpen(false)}
-                className="text-white hover:bg-white/20 h-8 w-8"
+                className="text-white hover:bg-white/20 h-10 w-10 rounded-full transition-all duration-200"
               >
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </Button>
             </div>
           </div>
 
-          <CardContent className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+          <CardContent className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] bg-gradient-to-b from-gray-50 to-white">
             {isLoading ? (
               <SkeletonLoader />
             ) : (
@@ -156,7 +160,7 @@ const EmailComparisonTool = () => {
                     placeholder="Paste your original well indented Document here from MS Word Offline version"
                     value={comparisonData.originalDocument}
                     onChange={(value) => handleInputChange('originalDocument', value)}
-                    className="min-h-[300px]"
+                    className="min-h-[300px] border-2 border-gray-200 hover:border-blue-300 focus-within:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
                     label="Original Document"
                   />
                 </div>
@@ -167,7 +171,7 @@ const EmailComparisonTool = () => {
                     placeholder="Paste the exact date-time format as written on the particular mail you want to be compared (Case and space Sensitive)"
                     value={comparisonData.dateTimeFormat}
                     onChange={(value) => handleInputChange('dateTimeFormat', value)}
-                    className="min-h-[80px]"
+                    className="min-h-[80px] border-2 border-gray-200 hover:border-blue-300 focus-within:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
                     label="Date-Time Format"
                   />
                 </div>
@@ -178,17 +182,17 @@ const EmailComparisonTool = () => {
                     placeholder="Any marker like ****,++++ or Sender's name from the mail ending as it is"
                     value={comparisonData.marker}
                     onChange={(value) => handleInputChange('marker', value)}
-                    className="min-h-[80px]"
+                    className="min-h-[80px] border-2 border-gray-200 hover:border-blue-300 focus-within:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
                     label="Email Marker"
                   />
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex justify-between items-center pt-4 border-t">
+                <div className="flex justify-between items-center pt-6 border-t border-gray-200">
                   <Button
                     variant="outline"
                     onClick={() => setShowRules(true)}
-                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                    className="text-blue-600 border-2 border-blue-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 hover:border-blue-300 transition-all duration-200"
                   >
                     <Info className="h-4 w-4 mr-2" />
                     Usage Rules
@@ -198,17 +202,17 @@ const EmailComparisonTool = () => {
                     <Button
                       variant="outline"
                       onClick={resetForm}
-                      className="border-gray-300 hover:bg-gray-50"
+                      className="border-2 border-gray-300 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:border-gray-400 transition-all duration-200"
                     >
                       Reset
                     </Button>
                     <Button
                       onClick={handleCompare}
                       disabled={!isFormValid}
-                      className={`px-8 transition-all duration-300 ${
+                      className={`px-8 transition-all duration-300 transform hover:scale-105 rounded-lg ${
                         isFormValid 
-                          ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl' 
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          ? 'bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl' 
+                          : 'bg-gradient-to-r from-gray-300 to-gray-400 text-gray-500 cursor-not-allowed'
                       }`}
                     >
                       {isFormValid ? (
@@ -239,25 +243,36 @@ const EmailComparisonTool = () => {
 
       {/* Usage Rules Modal */}
       {showRules && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-60 flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg bg-white shadow-2xl">
-            <div className="bg-blue-600 text-white p-4 relative">
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-60 flex items-center justify-center p-4">
+          <Card className="w-full max-w-lg bg-white shadow-2xl border-0 rounded-2xl">
+            <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-700 text-white p-6 relative rounded-t-2xl">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-bold">Usage Rules & Guidelines</h2>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                    <img 
+                      src="/lovable-uploads/7a69c4fd-3d5e-45d2-b3c8-c758260eb538.png" 
+                      alt="JSW Logo" 
+                      className="w-6 h-6 object-contain"
+                    />
+                  </div>
+                  <h2 className="text-lg font-bold">Usage Rules & Guidelines</h2>
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowRules(false)}
-                  className="text-white hover:bg-white/20 h-8 w-8"
+                  className="text-white hover:bg-white/20 h-10 w-10 rounded-full transition-all duration-200"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
                 </Button>
               </div>
             </div>
-            <CardContent className="p-6">
+            <CardContent className="p-6 bg-gradient-to-b from-gray-50 to-white rounded-b-2xl">
               <div className="space-y-4 text-sm text-gray-700">
-                <div>
-                  <h3 className="font-semibold text-blue-600 mb-2">📄 Original Document</h3>
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                  <h3 className="font-semibold text-blue-600 mb-2 flex items-center">
+                    📄 Original Document
+                  </h3>
                   <ul className="list-disc list-inside space-y-1 text-gray-600">
                     <li>Paste well-formatted text from MS Word</li>
                     <li>Maintain proper indentation and spacing</li>
@@ -265,8 +280,10 @@ const EmailComparisonTool = () => {
                   </ul>
                 </div>
                 
-                <div>
-                  <h3 className="font-semibold text-blue-600 mb-2">📅 Date-Time Format</h3>
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                  <h3 className="font-semibold text-blue-600 mb-2 flex items-center">
+                    📅 Date-Time Format
+                  </h3>
                   <ul className="list-disc list-inside space-y-1 text-gray-600">
                     <li>Copy exact format from email (case sensitive)</li>
                     <li>Include spaces and special characters as shown</li>
@@ -274,8 +291,10 @@ const EmailComparisonTool = () => {
                   </ul>
                 </div>
                 
-                <div>
-                  <h3 className="font-semibold text-blue-600 mb-2">🏷️ Email Marker</h3>
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                  <h3 className="font-semibold text-blue-600 mb-2 flex items-center">
+                    🏷️ Email Marker
+                  </h3>
                   <ul className="list-disc list-inside space-y-1 text-gray-600">
                     <li>Use exact markers from email (****,++++, etc.)</li>
                     <li>Include sender's name as it appears</li>
