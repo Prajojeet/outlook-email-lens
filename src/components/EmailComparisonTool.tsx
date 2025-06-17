@@ -33,6 +33,41 @@ const EmailComparisonTool = () => {
     return typeof window !== 'undefined' && window.chrome && window.chrome.storage && window.chrome.tabs;
   };
 
+  // Function to scrape HTML body from current page
+  const scrapePageHTML = async (): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      if (isChromeExtension()) {
+        // Send message to content script to get HTML body
+        window.chrome!.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0]?.id) {
+            window.chrome!.tabs.sendMessage(tabs[0].id, { action: "getBodyContent" }, (response) => {
+              if (window.chrome!.runtime.lastError) {
+                reject(new Error("Could not access page content. Make sure you're on a supported page."));
+                return;
+              }
+              
+              if (response && response.success) {
+                resolve(response.bodyContent);
+              } else {
+                reject(new Error(response?.error || "Failed to extract page content"));
+              }
+            });
+          } else {
+            reject(new Error("No active tab found"));
+          }
+        });
+      } else {
+        // Fallback for development - get current page body
+        try {
+          const bodyContent = document.body.outerHTML;
+          resolve(bodyContent);
+        } catch (error) {
+          reject(new Error("Cannot access page content in development mode"));
+        }
+      }
+    });
+  };
+
   // Load data from Chrome storage on component mount
   useEffect(() => {
     const loadStoredData = async () => {
@@ -152,8 +187,21 @@ const EmailComparisonTool = () => {
         currentUrl = window.location.href;
       }
 
-      // Make actual API call to your backend
-      const response = await fetch('YOUR_API_ENDPOINT_HERE', {
+      // Scrape HTML body content from the current page
+      toast({
+        title: "Extracting Content",
+        description: "Getting HTML content from the current page...",
+      });
+
+      const htmlBodyContent = await scrapePageHTML();
+
+      toast({
+        title: "Content Extracted",
+        description: "HTML content extracted successfully. Sending to backend...",
+      });
+
+      // Make API call to Azure backend with all required data
+      const response = await fetch('YOUR_AZURE_API_ENDPOINT_HERE', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,7 +210,9 @@ const EmailComparisonTool = () => {
           originalDocument: comparisonData.originalDocument,
           dateTimeFormat: comparisonData.dateTimeFormat,
           marker: comparisonData.marker,
-          currentUrl: currentUrl
+          htmlBodyContent: htmlBodyContent,
+          currentUrl: currentUrl,
+          timestamp: new Date().toISOString()
         }),
       });
 
@@ -183,6 +233,10 @@ const EmailComparisonTool = () => {
           <div style="background: #eff6ff; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
             <h3 style="color: #1e40af; margin-bottom: 8px;">Results</h3>
             <pre style="color: #1e40af; font-family: monospace; white-space: pre-wrap;">${JSON.stringify(data.results || data, null, 2)}</pre>
+          </div>
+          <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
+            <h3 style="color: #16a34a; margin-bottom: 8px;">HTML Content Info</h3>
+            <p style="color: #15803d;">HTML body content extracted (${htmlBodyContent.length} characters)</p>
           </div>
         </div>
       `;
