@@ -20,9 +20,8 @@ const ResultsDisplay = ({ results, onClose, onCopy }: ResultsDisplayProps) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-60 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-60 flex items-center justify-center p-6">
       <div className="relative">
-        {/* 3D Shadow layers for results display */}
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-200/20 to-indigo-200/20 rounded-2xl translate-x-4 translate-y-4 blur-xl"></div>
         <div className="absolute inset-0 bg-gradient-to-br from-gray-300/15 to-gray-400/15 rounded-2xl translate-x-2 translate-y-2 blur-md"></div>
         
@@ -42,12 +41,12 @@ const ResultsDisplay = ({ results, onClose, onCopy }: ResultsDisplayProps) => {
                   <p className="text-emerald-100 text-sm">Analysis completed successfully</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleCopy}
-                  className="text-white hover:bg-white/20 h-10 w-10 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-110"
+                  className="text-white hover:bg-white/20 h-11 w-11 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-110"
                   title="Copy results"
                 >
                   {copied ? (
@@ -60,7 +59,7 @@ const ResultsDisplay = ({ results, onClose, onCopy }: ResultsDisplayProps) => {
                   variant="ghost"
                   size="icon"
                   onClick={onClose}
-                  className="text-white hover:bg-white/20 h-10 w-10 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-110"
+                  className="text-white hover:bg-white/20 h-11 w-11 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-110"
                 >
                   <X className="h-5 w-5" />
                 </Button>
@@ -76,8 +75,8 @@ const ResultsDisplay = ({ results, onClose, onCopy }: ResultsDisplayProps) => {
               />
             </div>
             
-            <div className="border-t bg-gradient-to-r from-gray-50 to-gray-100 p-4 flex justify-between items-center rounded-b-2xl shadow-inner">
-              <div className="text-sm text-gray-600 flex items-center space-x-2">
+            <div className="border-t bg-gradient-to-r from-gray-50 to-gray-100 p-5 flex justify-between items-center rounded-b-2xl shadow-inner">
+              <div className="text-sm text-gray-600 flex items-center space-x-3">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
                 <span>Results generated • Ready to copy</span>
               </div>
