@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { X, Copy, Info, CheckCircle, Loader2, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,13 +28,17 @@ const EmailComparisonTool = () => {
   const [results, setResults] = useState('');
   const { toast } = useToast();
 
+  // Check if Chrome extension APIs are available
+  const isChromeExtension = () => {
+    return typeof window !== 'undefined' && window.chrome && window.chrome.storage && window.chrome.tabs;
+  };
+
   // Load data from Chrome storage on component mount
   useEffect(() => {
     const loadStoredData = async () => {
       try {
-        // Try Chrome extension storage first
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-          const result = await chrome.storage.local.get(['emailComparisonData']);
+        if (isChromeExtension()) {
+          const result = await window.chrome!.storage.local.get(['emailComparisonData']);
           if (result.emailComparisonData) {
             setComparisonData(result.emailComparisonData);
           }
@@ -58,8 +61,8 @@ const EmailComparisonTool = () => {
   useEffect(() => {
     const saveData = async () => {
       try {
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-          await chrome.storage.local.set({ emailComparisonData: comparisonData });
+        if (isChromeExtension()) {
+          await window.chrome!.storage.local.set({ emailComparisonData: comparisonData });
         } else {
           // Fallback to localStorage for development
           localStorage.setItem('emailComparisonData', JSON.stringify(comparisonData));
@@ -76,9 +79,8 @@ const EmailComparisonTool = () => {
   useEffect(() => {
     const checkOutlookPage = async () => {
       try {
-        // For Chrome extension, check the current tab
-        if (typeof chrome !== 'undefined' && chrome.tabs) {
-          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (isChromeExtension()) {
+          const [tab] = await window.chrome!.tabs.query({ active: true, currentWindow: true });
           const currentUrl = tab.url?.toLowerCase() || '';
           const isOutlook = currentUrl.includes('outlook.live.com') || 
                            currentUrl.includes('outlook.office.com') || 
@@ -141,6 +143,15 @@ const EmailComparisonTool = () => {
     setIsLoading(true);
     
     try {
+      // Get current URL for context
+      let currentUrl = '';
+      if (isChromeExtension()) {
+        const [tab] = await window.chrome!.tabs.query({ active: true, currentWindow: true });
+        currentUrl = tab.url || '';
+      } else {
+        currentUrl = window.location.href;
+      }
+
       // Make actual API call to your backend
       const response = await fetch('YOUR_API_ENDPOINT_HERE', {
         method: 'POST',
@@ -151,9 +162,7 @@ const EmailComparisonTool = () => {
           originalDocument: comparisonData.originalDocument,
           dateTimeFormat: comparisonData.dateTimeFormat,
           marker: comparisonData.marker,
-          currentUrl: typeof chrome !== 'undefined' ? 
-            (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.url : 
-            window.location.href
+          currentUrl: currentUrl
         }),
       });
 
@@ -227,8 +236,8 @@ const EmailComparisonTool = () => {
   const handleClose = async () => {
     // Clear stored data when closing
     try {
-      if (typeof chrome !== 'undefined' && chrome.storage) {
-        await chrome.storage.local.remove(['emailComparisonData']);
+      if (isChromeExtension()) {
+        await window.chrome!.storage.local.remove(['emailComparisonData']);
       } else {
         localStorage.removeItem('emailComparisonData');
       }
