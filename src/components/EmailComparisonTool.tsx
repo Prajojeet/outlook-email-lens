@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Copy, Info, CheckCircle, Loader2, Minimize } from 'lucide-react';
+import { X, Copy, Info, CheckCircle, Loader2, Minimize, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,7 @@ const EmailComparisonTool = () => {
   const [showRules, setShowRules] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isOnOutlook, setIsOnOutlook] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [comparisonData, setComparisonData] = useState<ComparisonData>({
     originalDocument: '',
     dateTimeFormat: '',
@@ -30,19 +31,27 @@ const EmailComparisonTool = () => {
 
   // Check if Chrome extension APIs are available
   const isChromeExtension = () => {
-    return typeof window !== 'undefined' && window.chrome && window.chrome.storage && window.chrome.tabs;
+    return typeof window !== 'undefined' && 
+           typeof (window as any).chrome !== 'undefined' && 
+           (window as any).chrome.runtime && 
+           (window as any).chrome.tabs;
   };
 
   // Function to scrape HTML body from current page
   const scrapePageHTML = async (): Promise<string> => {
     return new Promise((resolve, reject) => {
       if (isChromeExtension()) {
-        // Send message to content script to get HTML body
-        window.chrome!.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const chrome = (window as any).chrome;
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs: any[]) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error("Extension error: " + chrome.runtime.lastError.message));
+            return;
+          }
+          
           if (tabs[0]?.id) {
-            window.chrome!.tabs.sendMessage(tabs[0].id, { action: "getBodyContent" }, (response) => {
-              if (window.chrome!.runtime.lastError) {
-                reject(new Error("Could not access page content. Make sure you're on a supported page."));
+            chrome.tabs.sendMessage(tabs[0].id, { action: "getBodyContent" }, (response: any) => {
+              if (chrome.runtime.lastError) {
+                reject(new Error("Could not access page content. Please refresh the page and try again."));
                 return;
               }
               
@@ -57,7 +66,7 @@ const EmailComparisonTool = () => {
           }
         });
       } else {
-        // Fallback for development - get current page body
+        // Fallback for development
         try {
           const bodyContent = document.body.outerHTML;
           resolve(bodyContent);
@@ -73,12 +82,12 @@ const EmailComparisonTool = () => {
     const loadStoredData = async () => {
       try {
         if (isChromeExtension()) {
-          const result = await window.chrome!.storage.local.get(['emailComparisonData']);
+          const chrome = (window as any).chrome;
+          const result = await chrome.storage.local.get(['emailComparisonData']);
           if (result.emailComparisonData) {
             setComparisonData(result.emailComparisonData);
           }
         } else {
-          // Fallback to localStorage for development
           const stored = localStorage.getItem('emailComparisonData');
           if (stored) {
             setComparisonData(JSON.parse(stored));
@@ -97,9 +106,9 @@ const EmailComparisonTool = () => {
     const saveData = async () => {
       try {
         if (isChromeExtension()) {
-          await window.chrome!.storage.local.set({ emailComparisonData: comparisonData });
+          const chrome = (window as any).chrome;
+          await chrome.storage.local.set({ emailComparisonData: comparisonData });
         } else {
-          // Fallback to localStorage for development
           localStorage.setItem('emailComparisonData', JSON.stringify(comparisonData));
         }
       } catch (error) {
@@ -115,19 +124,19 @@ const EmailComparisonTool = () => {
     const checkOutlookPage = async () => {
       try {
         if (isChromeExtension()) {
-          const [tab] = await window.chrome!.tabs.query({ active: true, currentWindow: true });
+          const chrome = (window as any).chrome;
+          const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
           const currentUrl = tab.url?.toLowerCase() || '';
           const isOutlook = currentUrl.includes('outlook.live.com') || 
                            currentUrl.includes('outlook.office.com') || 
                            currentUrl.includes('outlook.office365.com');
           setIsOnOutlook(isOutlook);
         } else {
-          // Fallback for development/web version
           const currentUrl = window.location.href.toLowerCase();
           const isOutlook = currentUrl.includes('outlook.live.com') || 
                            currentUrl.includes('outlook.office.com') || 
                            currentUrl.includes('outlook.office365.com') ||
-                           currentUrl.includes('mail.google.com'); // Added Gmail for testing
+                           currentUrl.includes('mail.google.com');
           setIsOnOutlook(isOutlook);
         }
       } catch (error) {
@@ -137,10 +146,7 @@ const EmailComparisonTool = () => {
     };
 
     checkOutlookPage();
-    
-    // Check periodically for URL changes
     const intervalId = setInterval(checkOutlookPage, 2000);
-    
     return () => clearInterval(intervalId);
   }, []);
 
@@ -151,6 +157,7 @@ const EmailComparisonTool = () => {
   const canCompare = isFormValid && isOnOutlook;
 
   const handleInputChange = (field: keyof ComparisonData, value: string) => {
+    setError(null); // Clear error when user makes changes
     setComparisonData(prev => ({
       ...prev,
       [field]: value
@@ -160,12 +167,14 @@ const EmailComparisonTool = () => {
   const handleCompare = async () => {
     if (!canCompare) {
       if (!isFormValid) {
+        setError("Please fill in all required fields before comparing.");
         toast({
           title: "Missing Information",
           description: "Please fill in all fields before comparing.",
           variant: "destructive"
         });
       } else {
+        setError("Please open Microsoft Outlook webpage to compare emails.");
         toast({
           title: "Outlook Required",
           description: "Please open Microsoft Outlook webpage to compare emails.",
@@ -176,18 +185,19 @@ const EmailComparisonTool = () => {
     }
 
     setIsLoading(true);
+    setError(null);
     
     try {
       // Get current URL for context
       let currentUrl = '';
       if (isChromeExtension()) {
-        const [tab] = await window.chrome!.tabs.query({ active: true, currentWindow: true });
+        const chrome = (window as any).chrome;
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         currentUrl = tab.url || '';
       } else {
         currentUrl = window.location.href;
       }
 
-      // Scrape HTML body content from the current page
       toast({
         title: "Extracting Content",
         description: "Getting HTML content from the current page...",
@@ -200,8 +210,10 @@ const EmailComparisonTool = () => {
         description: "HTML content extracted successfully. Sending to backend...",
       });
 
-      // Make API call to Azure backend with all required data
-      const response = await fetch('YOUR_AZURE_API_ENDPOINT_HERE', {
+      // Replace with your actual Azure endpoint
+      const API_ENDPOINT = 'YOUR_AZURE_API_ENDPOINT_HERE';
+      
+      const response = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -217,26 +229,29 @@ const EmailComparisonTool = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`Server error: ${response.status} - ${response.statusText}`);
       }
 
       const data = await response.json();
       
-      // Process the response and format it for display
       const formattedResults = `
         <div class="comparison-result">
-          <h2 style="color: #1e40af; margin-bottom: 16px;">Email Comparison Results</h2>
-          <div style="background: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
-            <h3 style="color: #475569; margin-bottom: 8px;">Analysis Complete</h3>
-            <p style="color: #64748b;">${data.message || 'Comparison completed successfully.'}</p>
+          <h2 style="color: #1e40af; margin-bottom: 16px; font-size: 1.5rem; font-weight: bold;">Email Comparison Results</h2>
+          <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+            <h3 style="color: #475569; margin-bottom: 12px; font-size: 1.1rem; font-weight: 600;">Analysis Summary</h3>
+            <p style="color: #64748b; line-height: 1.6;">${data.message || 'Comparison completed successfully.'}</p>
           </div>
-          <div style="background: #eff6ff; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
-            <h3 style="color: #1e40af; margin-bottom: 8px;">Results</h3>
-            <pre style="color: #1e40af; font-family: monospace; white-space: pre-wrap;">${JSON.stringify(data.results || data, null, 2)}</pre>
+          <div style="background: #eff6ff; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #bfdbfe;">
+            <h3 style="color: #1e40af; margin-bottom: 12px; font-size: 1.1rem; font-weight: 600;">Detailed Results</h3>
+            <pre style="color: #1e40af; font-family: 'Monaco', 'Menlo', monospace; white-space: pre-wrap; line-height: 1.5; font-size: 0.9rem;">${JSON.stringify(data.results || data, null, 2)}</pre>
           </div>
-          <div style="background: #f0fdf4; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
-            <h3 style="color: #16a34a; margin-bottom: 8px;">HTML Content Info</h3>
-            <p style="color: #15803d;">HTML body content extracted (${htmlBodyContent.length} characters)</p>
+          <div style="background: #f0fdf4; padding: 20px; border-radius: 12px; border: 1px solid #bbf7d0;">
+            <h3 style="color: #16a34a; margin-bottom: 12px; font-size: 1.1rem; font-weight: 600;">Processing Information</h3>
+            <p style="color: #15803d; line-height: 1.6;">
+              ✓ HTML content extracted: ${(htmlBodyContent.length / 1024).toFixed(2)} KB<br/>
+              ✓ Document comparison completed<br/>
+              ✓ Processing time: ${new Date().toLocaleTimeString()}
+            </p>
           </div>
         </div>
       `;
@@ -251,9 +266,11 @@ const EmailComparisonTool = () => {
       
     } catch (error) {
       console.error('API Error:', error);
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred while processing your request.";
+      setError(errorMessage);
       toast({
         title: "Comparison Failed",
-        description: error instanceof Error ? error.message : "An error occurred while processing your request.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -285,13 +302,14 @@ const EmailComparisonTool = () => {
     });
     setShowResults(false);
     setResults('');
+    setError(null);
   };
 
   const handleClose = async () => {
-    // Clear stored data when closing
     try {
       if (isChromeExtension()) {
-        await window.chrome!.storage.local.remove(['emailComparisonData']);
+        const chrome = (window as any).chrome;
+        await chrome.storage.local.remove(['emailComparisonData']);
       } else {
         localStorage.removeItem('emailComparisonData');
       }
@@ -342,7 +360,6 @@ const EmailComparisonTool = () => {
 
   return (
     <>
-      {/* Main Extension Popup - Half Screen Size */}
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-6">
         <div className="relative w-full max-w-3xl h-[50vh]">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-200/30 to-indigo-200/30 rounded-2xl translate-x-3 translate-y-3 blur-lg"></div>
@@ -391,6 +408,16 @@ const EmailComparisonTool = () => {
                 <SkeletonLoader />
               ) : (
                 <div className="space-y-5 h-full">
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
+                      <AlertTriangle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-red-700 text-sm font-medium">Error</p>
+                        <p className="text-red-600 text-sm">{error}</p>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex-1">
                     <TextInputBox
                       placeholder="Paste your original well indented Document here from MS Word Offline version"
@@ -429,22 +456,22 @@ const EmailComparisonTool = () => {
                     </div>
                   )}
 
-                  <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                  <div className="flex justify-between items-center pt-6 border-t border-gray-200">
                     <Button
                       variant="outline"
                       onClick={() => setShowRules(true)}
-                      className="text-blue-600 border-2 border-blue-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 hover:border-blue-300 transition-all duration-200 shadow-md hover:shadow-lg"
+                      className="text-blue-600 border-2 border-blue-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100 hover:border-blue-300 transition-all duration-200 shadow-md hover:shadow-lg px-4 py-2"
                       size="sm"
                     >
                       <Info className="h-4 w-4 mr-2" />
                       Usage Rules
                     </Button>
                     
-                    <div className="flex space-x-3">
+                    <div className="flex space-x-4">
                       <Button
                         variant="outline"
                         onClick={resetForm}
-                        className="border-2 border-gray-300 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:border-gray-400 transition-all duration-200 shadow-md hover:shadow-lg"
+                        className="border-2 border-gray-300 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:border-gray-400 transition-all duration-200 shadow-md hover:shadow-lg px-4 py-2"
                         size="sm"
                       >
                         Reset
@@ -456,7 +483,7 @@ const EmailComparisonTool = () => {
                         <Button
                           onClick={handleCompare}
                           disabled={!canCompare || isLoading}
-                          className={`relative px-6 transition-all duration-300 transform hover:scale-105 hover:translate-y-[-1px] rounded-lg shadow-lg hover:shadow-xl ${
+                          className={`relative px-6 py-2 transition-all duration-300 transform hover:scale-105 hover:translate-y-[-1px] rounded-lg shadow-lg hover:shadow-xl ${
                             canCompare && !isLoading
                               ? 'bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700 text-white shadow-blue-200/50' 
                               : 'bg-gradient-to-r from-gray-300 to-gray-400 text-gray-500 cursor-not-allowed'
@@ -487,7 +514,6 @@ const EmailComparisonTool = () => {
         </div>
       </div>
 
-      {/* Results Display */}
       {showResults && (
         <ResultsDisplay
           results={results}
@@ -496,13 +522,12 @@ const EmailComparisonTool = () => {
         />
       )}
 
-      {/* Usage Rules Modal */}
       {showRules && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-60 flex items-center justify-center p-6">
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-200/20 to-indigo-200/20 rounded-2xl translate-x-2 translate-y-2 blur-lg"></div>
             
-            <Card className="relative z-10 w-full max-w-lg bg-white shadow-2xl border-0 rounded-2xl">
+            <Card className="relative z-10 w-full max-w-2xl bg-white shadow-2xl border-0 rounded-2xl max-h-[80vh] overflow-hidden">
               <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-700 text-white p-6 relative rounded-t-2xl shadow-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
@@ -525,51 +550,139 @@ const EmailComparisonTool = () => {
                   </Button>
                 </div>
               </div>
-              <CardContent className="p-6 bg-gradient-to-b from-gray-50 to-white rounded-b-2xl">
-                <div className="space-y-4 text-sm text-gray-700">
-                  <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-100">
-                    <h3 className="font-semibold text-blue-600 mb-2 flex items-center">
-                      📄 Original Document
-                    </h3>
-                    <ul className="list-disc list-inside space-y-1 text-gray-600">
-                      <li>Paste well-formatted text from MS Word</li>
-                      <li>Maintain proper indentation and spacing</li>
-                      <li>Include all relevant content for comparison</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-100">
-                    <h3 className="font-semibold text-blue-600 mb-2 flex items-center">
-                      📅 Date-Time Format
-                    </h3>
-                    <ul className="list-disc list-inside space-y-1 text-gray-600">
-                      <li>Copy exact format from email (case sensitive)</li>
-                      <li>Include spaces and special characters as shown</li>
-                      <li>Example: "Mon, 15 Jan 2024 10:30:00 GMT"</li>
-                    </ul>
-                  </div>
-                  
-                  <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-100">
-                    <h3 className="font-semibold text-blue-600 mb-2 flex items-center">
-                      🏷️ Email Marker
-                    </h3>
-                    <ul className="list-disc list-inside space-y-1 text-gray-600">
-                      <li>Use exact markers from email (****,++++, etc.)</li>
-                      <li>Include sender's name as it appears</li>
-                      <li>Copy trailing characters exactly</li>
-                    </ul>
-                  </div>
+              
+              <CardContent className="p-0">
+                <div className="max-h-[60vh] overflow-y-auto bg-gradient-to-b from-gray-50 to-white">
+                  <div className="p-6 space-y-6">
+                    <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                      <h3 className="font-semibold text-blue-600 mb-4 flex items-center text-lg">
+                        📄 Original Document Requirements
+                      </h3>
+                      <div className="space-y-3 text-gray-700">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Paste well-formatted text from MS Word offline version</p>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Maintain proper indentation and spacing as in original</p>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Include all relevant content sections for accurate comparison</p>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Preserve formatting elements like headers, bullet points, and numbering</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                      <h3 className="font-semibold text-blue-600 mb-4 flex items-center text-lg">
+                        📅 Date-Time Format Guidelines
+                      </h3>
+                      <div className="space-y-3 text-gray-700">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Copy exact format from email header (case and space sensitive)</p>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Include all punctuation marks and special characters as shown</p>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-lg border-l-4 border-green-500">
+                          <p className="text-sm font-medium text-gray-800 mb-2">Examples:</p>
+                          <div className="space-y-1 text-sm text-gray-600 font-mono">
+                            <p>"Mon, 15 Jan 2024 10:30:00 GMT"</p>
+                            <p>"2024-01-15T10:30:00Z"</p>
+                            <p>"January 15, 2024 at 10:30 AM"</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
+                      <h3 className="font-semibold text-blue-600 mb-4 flex items-center text-lg">
+                        🏷️ Email Marker Configuration
+                      </h3>
+                      <div className="space-y-3 text-gray-700">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Use exact markers from email signature (****,++++, etc.)</p>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Include sender's name exactly as it appears in signature</p>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Copy trailing characters and formatting precisely</p>
+                        </div>
+                        <div className="bg-gray-50 p-4 rounded-lg border-l-4 border-purple-500">
+                          <p className="text-sm font-medium text-gray-800 mb-2">Common Markers:</p>
+                          <div className="space-y-1 text-sm text-gray-600 font-mono">
+                            <p>**** John Doe ****</p>
+                            <p>++++ Jane Smith ++++</p>
+                            <p>--- Best Regards, Mike ---</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                  <div className="bg-blue-50 p-4 rounded-xl shadow-lg border border-blue-100">
-                    <h3 className="font-semibold text-blue-600 mb-2 flex items-center">
-                      📧 Outlook Requirement
-                    </h3>
-                    <ul className="list-disc list-inside space-y-1 text-gray-600">
-                      <li>Open Microsoft Outlook webpage before comparing</li>
-                      <li>Extension works with outlook.live.com and outlook.office.com</li>
-                      <li>Compare button glows only when on Outlook</li>
-                    </ul>
+                    <div className="bg-blue-50 p-6 rounded-xl shadow-lg border border-blue-200">
+                      <h3 className="font-semibold text-blue-600 mb-4 flex items-center text-lg">
+                        📧 Microsoft Outlook Requirements
+                      </h3>
+                      <div className="space-y-3 text-gray-700">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Open Microsoft Outlook webpage before initiating comparison</p>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Supported domains: outlook.live.com, outlook.office.com, outlook.office365.com</p>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Compare button activates only when proper conditions are met</p>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Ensure page is fully loaded before starting comparison</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-6 rounded-xl shadow-lg border border-emerald-200">
+                      <h3 className="font-semibold text-emerald-600 mb-4 flex items-center text-lg">
+                        ⚡ Processing & Performance Tips
+                      </h3>
+                      <div className="space-y-3 text-gray-700">
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Processing time varies based on document and email content size</p>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Minimize window to preserve input data during processing</p>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 flex-shrink-0"></div>
+                          <p className="leading-relaxed">Results are automatically formatted for easy review and copying</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                </div>
+                
+                <div className="border-t bg-gradient-to-r from-gray-50 to-gray-100 p-4 flex justify-end rounded-b-2xl">
+                  <Button
+                    onClick={() => setShowRules(false)}
+                    className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700 text-white transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl px-6 py-2"
+                  >
+                    Got it
+                  </Button>
                 </div>
               </CardContent>
             </Card>
