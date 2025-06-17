@@ -8,10 +8,9 @@ interface ResultsDisplayProps {
   results: string;
   onClose: () => void;
   onCopy: () => void;
-  isOpen: boolean;
 }
 
-const ResultsDisplay = ({ results, onClose, onCopy, isOpen }: ResultsDisplayProps) => {
+const ResultsDisplay = ({ results, onClose, onCopy }: ResultsDisplayProps) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -19,8 +18,6 @@ const ResultsDisplay = ({ results, onClose, onCopy, isOpen }: ResultsDisplayProp
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-60 flex items-center justify-center p-4">
