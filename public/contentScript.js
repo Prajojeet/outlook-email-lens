@@ -24,15 +24,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true;
 });
 
-// Also listen for direct body content requests
+// Listen for body content requests - this is used by the Compare function
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getBodyContent") {
     try {
+      // Extract the complete body HTML content
       const bodyContent = document.body.outerHTML;
-      sendResponse({ success: true, bodyContent: bodyContent });
+      
+      console.log('HTML Body Content extracted:', {
+        size: bodyContent.length,
+        preview: bodyContent.substring(0, 200) + '...'
+      });
+      
+      sendResponse({ 
+        success: true, 
+        bodyContent: bodyContent,
+        metadata: {
+          url: window.location.href,
+          title: document.title,
+          timestamp: new Date().toISOString(),
+          contentLength: bodyContent.length
+        }
+      });
     } catch (error) {
-      sendResponse({ success: false, error: error.message });
+      console.error('Error extracting body content:', error);
+      sendResponse({ 
+        success: false, 
+        error: error.message 
+      });
     }
   }
   return true;
 });
+
+// Optional: Log when content script is loaded
+console.log('Email Comparison Tool content script loaded on:', window.location.href);

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { X, Copy, Info, CheckCircle, Loader2, Minimize, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -157,7 +158,7 @@ const EmailComparisonTool = () => {
   const canCompare = isFormValid && isOnOutlook;
 
   const handleInputChange = (field: keyof ComparisonData, value: string) => {
-    setError(null); // Clear error when user makes changes
+    setError(null);
     setComparisonData(prev => ({
       ...prev,
       [field]: value
@@ -203,29 +204,38 @@ const EmailComparisonTool = () => {
         description: "Getting HTML content from the current page...",
       });
 
+      // Scrape HTML body content from current page
       const htmlBodyContent = await scrapePageHTML();
 
       toast({
         title: "Content Extracted",
-        description: "HTML content extracted successfully. Sending to backend...",
+        description: `HTML content extracted successfully (${(htmlBodyContent.length / 1024).toFixed(2)} KB). Sending to backend...`,
       });
 
       // Replace with your actual Azure endpoint
       const API_ENDPOINT = 'YOUR_AZURE_API_ENDPOINT_HERE';
       
+      // Prepare payload for backend
+      const payload = {
+        originalDocument: comparisonData.originalDocument,
+        dateTimeFormat: comparisonData.dateTimeFormat,
+        marker: comparisonData.marker,
+        htmlBodyContent: htmlBodyContent,
+        currentUrl: currentUrl,
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('Sending payload to backend:', {
+        ...payload,
+        htmlBodyContent: `${htmlBodyContent.length} characters`
+      });
+
       const response = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          originalDocument: comparisonData.originalDocument,
-          dateTimeFormat: comparisonData.dateTimeFormat,
-          marker: comparisonData.marker,
-          htmlBodyContent: htmlBodyContent,
-          currentUrl: currentUrl,
-          timestamp: new Date().toISOString()
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -361,7 +371,7 @@ const EmailComparisonTool = () => {
   return (
     <>
       <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-        <div className="relative w-full max-w-3xl h-[50vh]">
+        <div className="relative w-full max-w-3xl h-[85vh]">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-200/30 to-indigo-200/30 rounded-2xl translate-x-3 translate-y-3 blur-lg"></div>
           <div className="absolute inset-0 bg-gradient-to-br from-gray-300/20 to-gray-400/20 rounded-2xl translate-x-1.5 translate-y-1.5 blur-sm"></div>
           
@@ -423,7 +433,7 @@ const EmailComparisonTool = () => {
                       placeholder="Paste your original well indented Document here from MS Word Offline version"
                       value={comparisonData.originalDocument}
                       onChange={(value) => handleInputChange('originalDocument', value)}
-                      className="min-h-[180px] border-2 border-gray-200 hover:border-blue-300 focus-within:border-blue-500 transition-all duration-200"
+                      className="min-h-[200px] border-2 border-gray-200 hover:border-blue-300 focus-within:border-blue-500 transition-all duration-200"
                       label="Original Document"
                     />
                   </div>
@@ -433,7 +443,7 @@ const EmailComparisonTool = () => {
                       placeholder="Paste the exact date-time format as written on the particular mail you want to be compared (Case and space Sensitive)"
                       value={comparisonData.dateTimeFormat}
                       onChange={(value) => handleInputChange('dateTimeFormat', value)}
-                      className="min-h-[60px] border-2 border-gray-200 hover:border-blue-300 focus-within:border-blue-500 transition-all duration-200"
+                      className="min-h-[70px] border-2 border-gray-200 hover:border-blue-300 focus-within:border-blue-500 transition-all duration-200"
                       label="Date-Time Format"
                     />
                   </div>
@@ -443,7 +453,7 @@ const EmailComparisonTool = () => {
                       placeholder="Any marker like ****,++++ or Sender's name from the mail ending as it is"
                       value={comparisonData.marker}
                       onChange={(value) => handleInputChange('marker', value)}
-                      className="min-h-[60px] border-2 border-gray-200 hover:border-blue-300 focus-within:border-blue-500 transition-all duration-200"
+                      className="min-h-[70px] border-2 border-gray-200 hover:border-blue-300 focus-within:border-blue-500 transition-all duration-200"
                       label="Email Marker"
                     />
                   </div>
@@ -456,7 +466,7 @@ const EmailComparisonTool = () => {
                     </div>
                   )}
 
-                  <div className="flex justify-between items-center pt-6 border-t border-gray-200 px-2">
+                  <div className="flex justify-between items-center pt-6 border-t border-gray-200">
                     <Button
                       variant="outline"
                       onClick={() => setShowRules(true)}
@@ -467,7 +477,7 @@ const EmailComparisonTool = () => {
                       Usage Rules
                     </Button>
                     
-                    <div className="flex space-x-4">
+                    <div className="flex items-center space-x-4">
                       <Button
                         variant="outline"
                         onClick={resetForm}
@@ -523,11 +533,11 @@ const EmailComparisonTool = () => {
       )}
 
       {showRules && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-6">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-6">
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-200/30 to-indigo-200/30 rounded-2xl translate-x-2 translate-y-2 blur-lg"></div>
             
-            <Card className="relative z-10 w-full max-w-4xl bg-white shadow-2xl border-0 rounded-2xl max-h-[85vh] overflow-hidden">
+            <Card className="relative z-10 w-full max-w-4xl bg-white shadow-2xl border-0 rounded-2xl max-h-[90vh] overflow-hidden">
               <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-700 text-white p-6 relative rounded-t-2xl shadow-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
