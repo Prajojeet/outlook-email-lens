@@ -5,36 +5,38 @@ export interface ComparisonData {
   originalDocument: string;
   dateTimeFormat: string;
   marker: string;
+  apiEndpoint: string;
 }
 
-export const useStorageData = () => {
+export const useStorageData = (isChromeExtension: boolean) => {
   const [comparisonData, setComparisonData] = useState<ComparisonData>({
     originalDocument: '',
     dateTimeFormat: '',
-    marker: ''
+    marker: '',
+    apiEndpoint: ''
   });
 
-  const isChromeExtension = () => {
-    return typeof window !== 'undefined' && 
-           typeof (window as any).chrome !== 'undefined' && 
-           (window as any).chrome.runtime && 
-           (window as any).chrome.storage;
-  };
-
-  // Load data from Chrome storage on component mount
+  // Load data from storage on mount
   useEffect(() => {
     const loadStoredData = async () => {
       try {
-        if (isChromeExtension()) {
+        if (isChromeExtension) {
           const chrome = (window as any).chrome;
           const result = await chrome.storage.local.get(['emailComparisonData']);
           if (result.emailComparisonData) {
-            setComparisonData(result.emailComparisonData);
+            setComparisonData(prev => ({
+              ...prev,
+              ...result.emailComparisonData
+            }));
           }
         } else {
           const stored = localStorage.getItem('emailComparisonData');
           if (stored) {
-            setComparisonData(JSON.parse(stored));
+            const parsedData = JSON.parse(stored);
+            setComparisonData(prev => ({
+              ...prev,
+              ...parsedData
+            }));
           }
         }
       } catch (error) {
@@ -43,13 +45,13 @@ export const useStorageData = () => {
     };
     
     loadStoredData();
-  }, []);
+  }, [isChromeExtension]);
 
-  // Save data to Chrome storage whenever comparisonData changes
+  // Save data to storage whenever comparisonData changes
   useEffect(() => {
     const saveData = async () => {
       try {
-        if (isChromeExtension()) {
+        if (isChromeExtension) {
           const chrome = (window as any).chrome;
           await chrome.storage.local.set({ emailComparisonData: comparisonData });
         } else {
@@ -61,11 +63,27 @@ export const useStorageData = () => {
     };
 
     saveData();
-  }, [comparisonData]);
+  }, [comparisonData, isChromeExtension]);
 
-  const clearStoredData = async () => {
+  const updateField = (field: keyof ComparisonData, value: string) => {
+    setComparisonData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const resetData = () => {
+    setComparisonData({
+      originalDocument: '',
+      dateTimeFormat: '',
+      marker: '',
+      apiEndpoint: ''
+    });
+  };
+
+  const clearStorage = async () => {
     try {
-      if (isChromeExtension()) {
+      if (isChromeExtension) {
         const chrome = (window as any).chrome;
         await chrome.storage.local.remove(['emailComparisonData']);
       } else {
@@ -76,17 +94,10 @@ export const useStorageData = () => {
     }
   };
 
-  const handleInputChange = (field: keyof ComparisonData, value: string) => {
-    setComparisonData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
   return {
     comparisonData,
-    handleInputChange,
-    clearStoredData,
-    setComparisonData
+    updateField,
+    resetData,
+    clearStorage
   };
 };

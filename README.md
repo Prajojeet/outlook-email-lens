@@ -1,73 +1,137 @@
-# Welcome to your Lovable project
 
-## Project info
+# Email Comparison Tool - Complete Azure Deployment Guide
 
-**URL**: https://lovable.dev/projects/40b20a87-b100-4e37-b7d2-ef52b3d9cb86
+This project implements your exact Python logic for email comparison with a complete Azure cloud deployment pipeline.
 
-## How can I edit this code?
+## 🚀 Quick Start
 
-There are several ways of editing your application.
+### Prerequisites
+- Azure subscription
+- Docker installed
+- Azure CLI installed
+- kubectl installed
 
-**Use Lovable**
+### 1. Setup Azure Resources
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/40b20a87-b100-4e37-b7d2-ef52b3d9cb86) and start prompting.
+```bash
+# Clone and navigate to project
+cd azure
 
-Changes made via Lovable will be committed automatically to this repo.
+# Set your Azure subscription ID
+export SUBSCRIPTION_ID="your-subscription-id-here"
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+# Run setup script
+chmod +x setup-azure-resources.sh
+./setup-azure-resources.sh
 ```
 
-**Edit a file directly in GitHub**
+This creates:
+- Resource Group
+- Azure Container Registry (ACR)  
+- Azure Kubernetes Service (AKS)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 2. Deploy the Backend
 
-**Use GitHub Codespaces**
+```bash
+# Set environment variables (from setup script output)
+export AZURE_SUBSCRIPTION_ID="your-subscription-id"
+export AZURE_RESOURCE_GROUP="email-comparison-rg"
+export AZURE_ACR_NAME="your-acr-name"
+export AZURE_AKS_CLUSTER="email-comparison-aks"
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+# Deploy
+chmod +x deploy.sh
+./deploy.sh
+```
 
-## What technologies are used for this project?
+### 3. Get Your API Endpoint
 
-This project is built with:
+```bash
+kubectl get service email-comparison-service
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Copy the EXTERNAL-IP and use: `http://EXTERNAL-IP/compare`
 
-## How can I deploy this project?
+### 4. Use the Frontend
 
-Simply open [Lovable](https://lovable.dev/projects/40b20a87-b100-4e37-b7d2-ef52b3d9cb86) and click on Share -> Publish.
+1. Open the frontend application
+2. Enter your API endpoint URL
+3. Fill in your document comparison data
+4. Click Compare on any Outlook page
 
-## Can I connect a custom domain to my Lovable project?
+## 🐍 Your Python Logic (Unchanged)
 
-Yes, you can!
+Your exact Python functions are preserved in `backend/main.py`:
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- `extract_clauses_from_text()` - Unchanged
+- `alpha_end_all_lines()` - Unchanged  
+- `extract_with_html2text()` - Unchanged
+- `extract_between_markers_from_html()` - Unchanged
+- `compare_clauses_sequentially()` - Unchanged
+- `display_comparison_results()` - Unchanged
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## 📁 Project Structure
+
+```
+├── backend/
+│   ├── main.py              # FastAPI with your exact Python logic
+│   ├── requirements.txt     # Python dependencies
+│   └── Dockerfile          # Container configuration
+├── k8s/
+│   └── deployment.yaml     # Kubernetes deployment
+├── azure/
+│   ├── setup-azure-resources.sh   # Create Azure resources
+│   └── deploy.sh                  # Deploy to Azure
+└── src/                    # Frontend React components
+```
+
+## 🔧 Manual Deployment Steps
+
+If you prefer manual deployment:
+
+### 1. Create Azure Resources
+```bash
+az group create --name email-comparison-rg --location eastus
+az acr create --resource-group email-comparison-rg --name myacrname --sku Basic
+az aks create --resource-group email-comparison-rg --name myakscluster --node-count 2
+```
+
+### 2. Build and Push Docker Image
+```bash
+cd backend
+az acr login --name myacrname
+docker build -t myacrname.azurecr.io/email-comparison-api:latest .
+docker push myacrname.azurecr.io/email-comparison-api:latest
+```
+
+### 3. Deploy to Kubernetes
+```bash
+az aks get-credentials --resource-group email-comparison-rg --name myakscluster
+kubectl apply -f k8s/deployment.yaml
+kubectl get service email-comparison-service
+```
+
+## 🎯 Features
+
+- **Exact Python Logic**: Your algorithms are completely unchanged
+- **HTML Output**: Results displayed as formatted, indented text
+- **Copy Functionality**: Easy copying of comparison results
+- **Azure Scaling**: Automatic scaling with Kubernetes
+- **Chrome Extension**: Works as browser extension on Outlook
+- **Secure**: API endpoint configurable per user
+
+## 🛠️ Customization
+
+- **Scaling**: Modify replicas in `k8s/deployment.yaml`
+- **Resources**: Adjust memory/CPU limits in deployment
+- **Dependencies**: Add packages to `backend/requirements.txt`
+
+## 📞 Support
+
+The system processes:
+1. Your original document → `alpha_end_all_lines()` → `extract_clauses_from_text()`
+2. HTML content → `extract_between_markers_from_html()` → `extract_clauses_from_text()`  
+3. Both results → `compare_clauses_sequentially()` → `display_comparison_results()`
+4. Final HTML displayed as indented text in the frontend
+
+Your Python logic remains exactly as provided - no modifications made.

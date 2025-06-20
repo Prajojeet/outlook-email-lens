@@ -13,6 +13,8 @@ interface ComparisonFormProps {
   isLoading: boolean;
   isOnOutlook: boolean;
   error: string | null;
+  apiEndpoint?: string;
+  onApiEndpointChange?: (endpoint: string) => void;
 }
 
 const ComparisonForm = ({ 
@@ -23,11 +25,14 @@ const ComparisonForm = ({
   onShowRules, 
   isLoading, 
   isOnOutlook, 
-  error 
+  error,
+  apiEndpoint = '',
+  onApiEndpointChange
 }: ComparisonFormProps) => {
   const isFormValid = comparisonData.originalDocument.trim() !== '' && 
                      comparisonData.dateTimeFormat.trim() !== '' && 
-                     comparisonData.marker.trim() !== '';
+                     comparisonData.marker.trim() !== '' &&
+                     apiEndpoint.trim() !== '';
 
   const canCompare = isFormValid && isOnOutlook;
 
@@ -42,6 +47,16 @@ const ComparisonForm = ({
           </div>
         </div>
       )}
+
+      <div>
+        <TextInputBox
+          placeholder="Enter your Azure API endpoint URL (e.g., http://your-service-ip/compare)"
+          value={apiEndpoint}
+          onChange={(value) => onApiEndpointChange?.(value)}
+          className="min-h-[70px] border-2 border-blue-200 hover:border-blue-400 focus-within:border-blue-600 transition-all duration-200 bg-blue-50"
+          label="Azure API Endpoint"
+        />
+      </div>
 
       <div className="flex-1">
         <TextInputBox
@@ -77,6 +92,14 @@ const ComparisonForm = ({
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <p className="text-amber-700 text-sm text-center">
             📧 Please open Microsoft Outlook webpage for comparing emails
+          </p>
+        </div>
+      )}
+
+      {!apiEndpoint.trim() && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-blue-700 text-sm text-center">
+            🔗 Please enter your Azure API endpoint URL to enable comparison
           </p>
         </div>
       )}
