@@ -1,63 +1,45 @@
 
-# Email Comparison Tool - Complete Azure Deployment Guide
+# Email Comparison Tool - Azure Virtual Machine Deployment
 
-This project implements your exact Python logic for email comparison with a complete Azure cloud deployment pipeline.
+This project implements your exact Python logic for email comparison with a simple Azure Virtual Machine deployment.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Azure subscription
-- Docker installed
-- Azure CLI installed
-- kubectl installed
+- Azure subscription ID
+- Azure CLI installed locally
 
-### 1. Setup Azure Resources
+### 1. Setup Azure Virtual Machine
 
 ```bash
-# Clone and navigate to project
 cd azure
 
-# Set your Azure subscription ID
-export SUBSCRIPTION_ID="your-subscription-id-here"
-
-# Run setup script
-chmod +x setup-azure-resources.sh
-./setup-azure-resources.sh
+# Set your Azure subscription ID and run setup
+chmod +x setup-vm.sh
+./setup-vm.sh YOUR_SUBSCRIPTION_ID
 ```
 
 This creates:
-- Resource Group
-- Azure Container Registry (ACR)  
-- Azure Kubernetes Service (AKS)
+- Resource Group: `email-comparison-rg`
+- Virtual Machine: Ubuntu 22.04, 2 vCPUs, 4GB RAM
+- Public IP with port 8000 open
 
-### 2. Deploy the Backend
+### 2. Deploy Your Application
 
 ```bash
-# Set environment variables (from setup script output)
-export AZURE_SUBSCRIPTION_ID="your-subscription-id"
-export AZURE_RESOURCE_GROUP="email-comparison-rg"
-export AZURE_ACR_NAME="your-acr-name"
-export AZURE_AKS_CLUSTER="email-comparison-aks"
-
-# Deploy
-chmod +x deploy.sh
-./deploy.sh
+# Deploy to the VM (use the public IP from step 1)
+chmod +x deploy-to-vm.sh
+./deploy-to-vm.sh YOUR_VM_PUBLIC_IP
 ```
 
 ### 3. Get Your API Endpoint
 
-```bash
-kubectl get service email-comparison-service
+After deployment, your API will be available at:
+```
+http://YOUR_VM_PUBLIC_IP:8000/compare
 ```
 
-Copy the EXTERNAL-IP and use: `http://EXTERNAL-IP/compare`
-
-### 4. Use the Frontend
-
-1. Open the frontend application
-2. Enter your API endpoint URL
-3. Fill in your document comparison data
-4. Click Compare on any Outlook page
+Update this URL in `src/components/EmailComparisonTool.tsx` if needed.
 
 ## 🐍 Your Python Logic (Unchanged)
 
@@ -70,68 +52,107 @@ Your exact Python functions are preserved in `backend/main.py`:
 - `compare_clauses_sequentially()` - Unchanged
 - `display_comparison_results()` - Unchanged
 
+## 💰 Cost Management
+
+### Start/Stop VM to Save Costs
+```bash
+# Stop VM when not in use (saves money)
+./vm-management.sh stop YOUR_SUBSCRIPTION_ID
+
+# Start VM when needed
+./vm-management.sh start YOUR_SUBSCRIPTION_ID
+
+# Check status
+./vm-management.sh status YOUR_SUBSCRIPTION_ID
+```
+
+### VM Costs (Approximate)
+- **Running**: ~$60-80/month (Standard_B2s)
+- **Stopped**: ~$5/month (storage only)
+
+## 🔧 Local Testing
+
+Before deploying to Azure, test locally:
+
+```bash
+# Backend testing
+cd backend
+python run_local.py
+# API available at: http://localhost:8000
+
+# Frontend testing  
+npm run dev
+# Frontend available at: http://localhost:5173
+```
+
 ## 📁 Project Structure
 
 ```
 ├── backend/
 │   ├── main.py              # FastAPI with your exact Python logic
 │   ├── requirements.txt     # Python dependencies
-│   └── Dockerfile          # Container configuration
-├── k8s/
-│   └── deployment.yaml     # Kubernetes deployment
+│   └── run_local.py        # Local development server
 ├── azure/
-│   ├── setup-azure-resources.sh   # Create Azure resources
-│   └── deploy.sh                  # Deploy to Azure
+│   ├── setup-vm.sh         # Create Azure VM
+│   ├── deploy-to-vm.sh     # Deploy to VM
+│   └── vm-management.sh    # Start/stop/manage VM
 └── src/                    # Frontend React components
 ```
 
-## 🔧 Manual Deployment Steps
+## 🛠️ VM Management Commands
 
-If you prefer manual deployment:
-
-### 1. Create Azure Resources
 ```bash
-az group create --name email-comparison-rg --location eastus
-az acr create --resource-group email-comparison-rg --name myacrname --sku Basic
-az aks create --resource-group email-comparison-rg --name myakscluster --node-count 2
+# Start VM
+./vm-management.sh start YOUR_SUBSCRIPTION_ID
+
+# Stop VM (saves costs)
+./vm-management.sh stop YOUR_SUBSCRIPTION_ID
+
+# Restart VM
+./vm-management.sh restart YOUR_SUBSCRIPTION_ID
+
+# Check status
+./vm-management.sh status YOUR_SUBSCRIPTION_ID
+
+# Get public IP
+./vm-management.sh ip YOUR_SUBSCRIPTION_ID
+
+# Delete everything (⚠️ permanent)
+./vm-management.sh delete YOUR_SUBSCRIPTION_ID
 ```
 
-### 2. Build and Push Docker Image
+## 🔍 Troubleshooting
+
+### Check if API is running
 ```bash
-cd backend
-az acr login --name myacrname
-docker build -t myacrname.azurecr.io/email-comparison-api:latest .
-docker push myacrname.azurecr.io/email-comparison-api:latest
+curl http://YOUR_VM_PUBLIC_IP:8000/health
 ```
 
-### 3. Deploy to Kubernetes
+### View application logs
 ```bash
-az aks get-credentials --resource-group email-comparison-rg --name myakscluster
-kubectl apply -f k8s/deployment.yaml
-kubectl get service email-comparison-service
+ssh azureuser@YOUR_VM_PUBLIC_IP 'sudo journalctl -u email-comparison.service -f'
+```
+
+### Restart the service
+```bash
+ssh azureuser@YOUR_VM_PUBLIC_IP 'sudo systemctl restart email-comparison.service'
 ```
 
 ## 🎯 Features
 
-- **Exact Python Logic**: Your algorithms are completely unchanged
-- **HTML Output**: Results displayed as formatted, indented text
-- **Copy Functionality**: Easy copying of comparison results
-- **Azure Scaling**: Automatic scaling with Kubernetes
-- **Chrome Extension**: Works as browser extension on Outlook
-- **Secure**: API endpoint configurable per user
+- **Simple VM Deployment**: No Docker/Kubernetes complexity
+- **Cost Effective**: Start/stop VM as needed
+- **Your Exact Logic**: Python algorithms completely unchanged
+- **Auto-restart**: Service automatically restarts if it crashes
+- **Easy Management**: Simple scripts for all operations
 
-## 🛠️ Customization
+## 📞 Usage Flow
 
-- **Scaling**: Modify replicas in `k8s/deployment.yaml`
-- **Resources**: Adjust memory/CPU limits in deployment
-- **Dependencies**: Add packages to `backend/requirements.txt`
-
-## 📞 Support
-
-The system processes:
-1. Your original document → `alpha_end_all_lines()` → `extract_clauses_from_text()`
-2. HTML content → `extract_between_markers_from_html()` → `extract_clauses_from_text()`  
-3. Both results → `compare_clauses_sequentially()` → `display_comparison_results()`
-4. Final HTML displayed as indented text in the frontend
+1. User fills form (original document, date-time format, marker)
+2. Frontend scrapes current Outlook page HTML
+3. Data sent to your Azure VM API endpoint
+4. Your Python logic processes the comparison
+5. Results returned as formatted HTML text
+6. User sees well-indented text with copy option
 
 Your Python logic remains exactly as provided - no modifications made.

@@ -3,7 +3,7 @@
 
 ## Prerequisites
 - Python 3.11+ installed
-- Node.js and npm/yarn for frontend
+- Node.js and npm for frontend
 
 ## Backend Setup
 
@@ -37,8 +37,7 @@
 
 ## Frontend Setup
 
-1. **Make sure the API endpoint in your frontend points to localhost:**
-   - In `src/components/EmailComparisonTool.tsx`, the `API_ENDPOINT` is already set to `http://localhost:8000/compare`
+1. **The API endpoint in your frontend is set to localhost by default**
 
 2. **Start the frontend development server:**
    ```bash
@@ -83,8 +82,8 @@ Mon 6/16/2025 11:20 AM
 - **Port Conflicts:** Change the port in `run_local.py` if 8000 is already in use
 - **Package Issues:** Make sure all Python packages are installed correctly
 
-## When Ready for Azure
+## When Ready for Azure VM
 
-1. Update the `API_ENDPOINT` in `EmailComparisonTool.tsx` to your Azure URL
-2. Use the provided Azure deployment scripts
-3. Follow the Azure setup guide in the project files
+1. Use the Azure VM setup scripts in the `/azure` folder
+2. Update the `API_ENDPOINT` in `EmailComparisonTool.tsx` to your VM's public IP
+3. Follow the Azure VM deployment guide in README.md
