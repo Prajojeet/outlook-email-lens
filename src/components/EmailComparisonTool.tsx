@@ -12,6 +12,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X, Minimize } from 'lucide-react';
 
+// Configure your API endpoint here - change this to your Azure endpoint once deployed
+const API_ENDPOINT = 'http://localhost:8000/compare';
+
 const EmailComparisonTool = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -27,18 +30,17 @@ const EmailComparisonTool = () => {
 
   const isFormValid = comparisonData.originalDocument.trim() !== '' && 
                      comparisonData.dateTimeFormat.trim() !== '' && 
-                     comparisonData.marker.trim() !== '' &&
-                     comparisonData.apiEndpoint.trim() !== '';
+                     comparisonData.marker.trim() !== '';
 
   const canCompare = isFormValid && isOnOutlook;
 
   const handleCompare = async () => {
     if (!canCompare) {
       if (!isFormValid) {
-        setError("Please fill in all required fields including the API endpoint before comparing.");
+        setError("Please fill in all required fields before comparing.");
         toast({
           title: "Missing Information",
-          description: "Please fill in all fields including the API endpoint before comparing.",
+          description: "Please fill in all fields before comparing.",
           variant: "destructive"
         });
       } else {
@@ -79,7 +81,7 @@ const EmailComparisonTool = () => {
         description: `HTML content extracted successfully (${(htmlBodyContent.length / 1024).toFixed(2)} KB). Sending to backend...`,
       });
 
-      // Prepare payload for your Azure backend
+      // Prepare payload for your backend
       const payload = {
         originalDocument: comparisonData.originalDocument,
         dateTimeFormat: comparisonData.dateTimeFormat,
@@ -94,7 +96,7 @@ const EmailComparisonTool = () => {
         htmlBodyContent: `${htmlBodyContent.length} characters`
       });
 
-      const response = await fetch(comparisonData.apiEndpoint, {
+      const response = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -247,8 +249,6 @@ const EmailComparisonTool = () => {
                   isLoading={isLoading}
                   isOnOutlook={isOnOutlook}
                   error={error}
-                  apiEndpoint={comparisonData.apiEndpoint}
-                  onApiEndpointChange={(endpoint) => updateField('apiEndpoint', endpoint)}
                 />
               )}
             </CardContent>
@@ -265,7 +265,10 @@ const EmailComparisonTool = () => {
       )}
 
       {showRules && (
-        <UsageRulesModal onClose={() => setShowRules(false)} />
+        <UsageRulesModal 
+          isOpen={showRules}
+          onClose={() => setShowRules(false)} 
+        />
       )}
     </>
   );

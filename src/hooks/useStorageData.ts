@@ -5,15 +5,13 @@ export interface ComparisonData {
   originalDocument: string;
   dateTimeFormat: string;
   marker: string;
-  apiEndpoint: string;
 }
 
 export const useStorageData = (isChromeExtension: boolean) => {
   const [comparisonData, setComparisonData] = useState<ComparisonData>({
     originalDocument: '',
     dateTimeFormat: '',
-    marker: '',
-    apiEndpoint: ''
+    marker: ''
   });
 
   // Load data from storage on mount
@@ -76,8 +74,7 @@ export const useStorageData = (isChromeExtension: boolean) => {
     setComparisonData({
       originalDocument: '',
       dateTimeFormat: '',
-      marker: '',
-      apiEndpoint: ''
+      marker: ''
     });
   };
 
